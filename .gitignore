@@ -1,0 +1,30 @@
+# Deployed settings — only the .tpl is tracked
+settings.json
+
+# Runtime and ephemeral state
+history.jsonl
+backups/
+cache/
+todos/
+projects/
+shell-snapshots/
+statsig/
+session-env/
+sessions/
+telemetry/
+plans/
+
+# Machine-specific config
+policy-limits.json
+
+# Plugin state (marketplace downloads, personal blocklist)
+plugins/
+
+# IDE integration state
+ide/
+
+# Backup dirs created by setup.sh
+.dotfiles-backup-*/
+
+# macOS
+.DS_Store
