@@ -118,6 +118,25 @@ for item in statusline-command.sh CLAUDE.md; do
   make_symlink "$DOTFILES_DIR/$item" "$CLAUDE_DIR/$item"
 done
 
+# Memory dir — path is derived from parent of this repo (the "projects" dir)
+# ~/.claude/projects/<encoded-parent>/memory/ where encoding is tr '/' '-'
+PROJECTS_DIR="$(dirname "$DOTFILES_DIR")"
+ENCODED_PROJECTS="$(printf '%s' "$PROJECTS_DIR" | tr '/' '-')"
+MEMORY_PARENT="$CLAUDE_DIR/projects/${ENCODED_PROJECTS}"
+MEMORY_DEST="$MEMORY_PARENT/memory"
+MEMORY_SRC="$DOTFILES_DIR/memory"
+if [[ -d "$MEMORY_SRC" ]]; then
+  mkdir -p "$MEMORY_PARENT"
+  if [[ -L "$MEMORY_DEST" && "$(readlink "$MEMORY_DEST")" == "$MEMORY_SRC" ]]; then
+    SKIPPED+=("memory/ (already symlinked)")
+  else
+    backup_if_needed "$MEMORY_DEST"
+    [[ -L "$MEMORY_DEST" ]] && rm -f "$MEMORY_DEST"
+    ln -s "$MEMORY_SRC" "$MEMORY_DEST"
+    SYMLINKED+=("memory/  →  $MEMORY_DEST")
+  fi
+fi
+
 # Directories (symlink the whole dir so new files appear automatically)
 for dir in commands skills hooks; do
   src="$DOTFILES_DIR/$dir"
