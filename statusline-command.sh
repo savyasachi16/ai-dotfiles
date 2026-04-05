@@ -14,9 +14,8 @@ SEP="${DIM} │ ${R}"
 # ── parse ──────────────────────────────────────────────────────────────────
 cwd=$(echo "$input"    | jq -r '.workspace.current_dir // .cwd // ""')
 model=$(echo "$input"  | jq -r '.model.display_name // ""')
-ctx_now=$(echo "$input" | jq -r '.context_window.current_usage.input_tokens // empty')
 ctx_max=$(echo "$input" | jq -r '.context_window.context_window_size // empty')
-ctx_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
+ctx_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
 cost=$(echo "$input"   | jq -r '.cost.total_cost_usd // empty')
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -28,13 +27,10 @@ fmt_k() {
   fi
 }
 
-# ── 1. model + token counts ─────────────────────────────────────────────────
+# ── 1. model ────────────────────────────────────────────────────────────────
 model_part=""
 if [ -n "$model" ]; then
   model_part="${BOLD}${model}${R}"
-  if [ -n "$ctx_now" ] && [ -n "$ctx_max" ]; then
-    model_part="${model_part} ${DIM}$(fmt_k "$ctx_now")/$(fmt_k "$ctx_max")${R}"
-  fi
 fi
 
 # ── 2. repo@branch + git indicators ─────────────────────────────────────────
@@ -60,7 +56,7 @@ fi
 
 # ── 3. context bar (color-coded) ─────────────────────────────────────────────
 ctx_part=""
-if [ -n "$ctx_pct" ] && [ "$ctx_pct" -ge 0 ] 2>/dev/null; then
+if [ -n "$ctx_max" ]; then
   if   [ "$ctx_pct" -lt 50 ]; then bar_col="${ESC}[32m"   # green
   elif [ "$ctx_pct" -lt 75 ]; then bar_col="${ESC}[33m"   # yellow
   elif [ "$ctx_pct" -lt 90 ]; then bar_col="${ESC}[31m"   # red
@@ -72,7 +68,8 @@ if [ -n "$ctx_pct" ] && [ "$ctx_pct" -ge 0 ] 2>/dev/null; then
   while [ "$i" -lt "$filled" ]; do bar="${bar}█"; i=$(( i+1 )); done
   while [ "$i" -lt 10        ]; do bar="${bar}░"; i=$(( i+1 )); done
 
-  ctx_part="${bar_col}${bar}${R} ${DIM}${ctx_pct}%${R}"
+  used_tokens=$(awk "BEGIN{printf \"%d\", $ctx_pct/100 * $ctx_max}")
+  ctx_part="${DIM}$(fmt_k "$used_tokens")/$(fmt_k "$ctx_max")${R}  ${bar_col}${bar}${R} ${DIM}${ctx_pct}%${R}"
 fi
 
 # ── 4. cost (placeholder for effort — see NOTE at top) ───────────────────────
