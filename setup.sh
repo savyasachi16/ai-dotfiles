@@ -156,6 +156,35 @@ for dir in commands skills hooks; do
   SYMLINKED+=("$dir/")
 done
 
+# ── plugins ───────────────────────────────────────────────────────────────────
+
+PLUGINS_FILE="$DOTFILES_DIR/plugins.txt"
+INSTALLED_PLUGINS=()
+SKIPPED_PLUGINS=()
+
+if [[ -f "$PLUGINS_FILE" ]] && command -v claude &>/dev/null; then
+  # Get list of already-installed plugin IDs (e.g. "superpowers@claude-plugins-official")
+  installed_list=$(claude plugin list 2>/dev/null | grep '❯' | awk '{print $2}' || true)
+
+  while IFS= read -r line; do
+    # Skip comments and blank lines
+    [[ "$line" =~ ^# ]] && continue
+    [[ -z "$line" ]]    && continue
+
+    plugin_id="$line"
+
+    if echo "$installed_list" | grep -qF "$plugin_id"; then
+      SKIPPED_PLUGINS+=("$plugin_id (already installed)")
+    else
+      if claude plugin install "$plugin_id" &>/dev/null; then
+        INSTALLED_PLUGINS+=("$plugin_id")
+      else
+        warn "Plugin install failed: $plugin_id"
+      fi
+    fi
+  done < "$PLUGINS_FILE"
+fi
+
 # ── summary ───────────────────────────────────────────────────────────────────
 
 printf '\n\033[1mSummary\033[0m\n'
@@ -171,6 +200,12 @@ if [[ ${#BACKED_UP[@]} -gt 0 ]]; then
 fi
 if [[ ${#SKIPPED[@]} -gt 0 ]]; then
   for f in "${SKIPPED[@]}"; do info "Skipped:   $f"; done
+fi
+if [[ ${#INSTALLED_PLUGINS[@]} -gt 0 ]]; then
+  for f in "${INSTALLED_PLUGINS[@]}"; do success "Plugin:    $f"; done
+fi
+if [[ ${#SKIPPED_PLUGINS[@]} -gt 0 ]]; then
+  for f in "${SKIPPED_PLUGINS[@]}"; do info "Plugin:    $f"; done
 fi
 
 if [[ ${#COPIED[@]} -eq 0 && ${#SYMLINKED[@]} -eq 0 ]]; then
