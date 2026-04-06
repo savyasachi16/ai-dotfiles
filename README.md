@@ -27,19 +27,20 @@ bash setup.sh
 
 Optional: Enable hands-free voice chat with Claude Code via MCP.
 
-**Quick setup:**
+**Setup:**
 ```bash
-# Install plugin
+# Add marketplace & install plugin
+claude plugin marketplace add mbailey/voicemode
 claude plugin install voicemode@voicemode
 
-# Run installer (installs local Whisper + Kokoro if not present)
-/voicemode:install
+# Run auto-setup (installs uv, voice-mode-install, Whisper + Kokoro)
+bash ./voicemode-setup.sh
 
-# Start conversing
+# Restart Claude Code, then:
 /voicemode:converse
 ```
 
-Requires: `ffmpeg`, `portaudio`, `node` (see [VoiceMode docs](https://github.com/mbailey/voicemode) for system-specific install).
+The `voicemode-setup.sh` handles all dependencies (uv, ffmpeg, portaudio, services).
 
 ## Adding new slash commands / skills / hooks
 
