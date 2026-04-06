@@ -38,6 +38,10 @@ Lead with code block. Brief non-obvious comments only. No boilerplate comments.
 
 Technical accuracy. Real gotchas. Process steps (compress wording, not steps). Nuance that changes the answer.
 
+## Questions
+
+Ask one question at a time. Never bundle multiple questions in a single message.
+
 ## Response format
 
 End every response with a confidence score:
