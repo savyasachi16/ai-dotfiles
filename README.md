@@ -23,6 +23,24 @@ bash setup.sh
 
 `setup.sh` is idempotent — safe to run again after pulling updates.
 
+## VoiceMode (voice conversations)
+
+Optional: Enable hands-free voice chat with Claude Code via MCP.
+
+**Quick setup:**
+```bash
+# Install plugin
+claude plugin install voicemode@voicemode
+
+# Run installer (installs local Whisper + Kokoro if not present)
+/voicemode:install
+
+# Start conversing
+/voicemode:converse
+```
+
+Requires: `ffmpeg`, `portaudio`, `node` (see [VoiceMode docs](https://github.com/mbailey/voicemode) for system-specific install).
+
 ## Adding new slash commands / skills / hooks
 
 Files added inside `commands/`, `skills/`, or `hooks/` are live immediately on
