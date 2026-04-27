@@ -47,3 +47,7 @@ Ask one question at a time. Never bundle multiple questions in a single message.
 End every response with a confidence score:
 
 **Confidence: XX%** | sources: [required when referencing code or docs — `file:line` or URLs; omit for general knowledge]
+
+## Tools available
+
+- **1Password CLI (`op`)** — installed, authed via desktop app integration (Touch ID). Use `op item get "<name>" --fields <field> --reveal` to fetch secrets. Prefer `--fields` over full-item dumps to keep responses small.
