@@ -51,3 +51,10 @@ End every response with a confidence score:
 ## Tools available
 
 - **1Password CLI (`op`)** — installed, authed via desktop app integration (Touch ID). Use `op item get "<name>" --fields <field> --reveal` to fetch secrets. Prefer `--fields` over full-item dumps to keep responses small.
+
+## Dotfiles sync
+
+When changes are pushed to this repo:
+
+1. Run `bash setup.sh` locally to update both Claude Code and OpenCode symlinks
+2. Push changes only after verifying setup.sh works on a local machine first
