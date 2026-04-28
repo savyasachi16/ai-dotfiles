@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup.sh — wire up Claude Code dotfiles via symlinks
+# setup.sh — wire up AI agent dotfiles via symlinks
 # Safe to run multiple times (idempotent).
 # Usage: bash setup.sh [--force]
 
@@ -7,8 +7,9 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
+OPENCODE_DIR="$HOME/.config/opencode"
 BACKUP_TS="$(date +%Y%m%d_%H%M%S)"
-BACKUP_DIR="$CLAUDE_DIR/.dotfiles-backup-$BACKUP_TS"
+BACKUP_DIR="$HOME/.ai-dotfiles-backup-$BACKUP_TS"
 BACKUP_USED=false
 
 # Counters for summary
@@ -16,6 +17,7 @@ COPIED=()
 SYMLINKED=()
 BACKED_UP=()
 SKIPPED=()
+INSTALLED_PLUGINS=()
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,10 +87,12 @@ esac
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 
-printf '\n\033[1mClaude Code dotfiles setup\033[0m\n'
+printf '\n\033[1mAI agent dotfiles setup\033[0m\n'
 printf 'Dotfiles: %s\n' "$DOTFILES_DIR"
-printf 'Target:   %s\n\n' "$CLAUDE_DIR"
+printf 'Claude:  %s\n' "$CLAUDE_DIR"
+printf 'OpenCode: %s\n\n' "$OPENCODE_DIR"
 
+mkdir -p "$OPENCODE_DIR"
 mkdir -p "$CLAUDE_DIR"
 
 # ── settings.json (copy, not symlink — see Claude Code bugs #764 / #3575) ────
@@ -156,6 +160,49 @@ for dir in commands skills hooks; do
   SYMLINKED+=("$dir/")
 done
 
+# ── OpenCode settings.json (copy, not symlink) ─────────────────────────
+
+OPENCODE_SETTINGS_TPL="$DOTFILES_DIR/opencode.json.tpl"
+OPENCODE_SETTINGS_DEST="$OPENCODE_DIR/opencode.json"
+
+if [[ -f "$OPENCODE_SETTINGS_TPL" ]]; then
+  EXPECTED_SETTINGS="$(sed "s|@@OPENCODE_DIR@@|${OPENCODE_DIR}|g" "$OPENCODE_SETTINGS_TPL")"
+  ACTUAL_SETTINGS="$(cat "$OPENCODE_SETTINGS_DEST" 2>/dev/null || true)"
+
+  if [[ "$EXPECTED_SETTINGS" == "$ACTUAL_SETTINGS" ]]; then
+    SKIPPED+=("opencode.json (already up to date)")
+  else
+    if [[ -e "$OPENCODE_SETTINGS_DEST" && "$ACTUAL_SETTINGS" != "$EXPECTED_SETTINGS" ]]; then
+      backup_if_needed "$OPENCODE_SETTINGS_DEST"
+    fi
+    printf '%s\n' "$EXPECTED_SETTINGS" > "$OPENCODE_SETTINGS_DEST"
+    COPIED+=("opencode.json")
+  fi
+fi
+
+# ── OpenCode symlinks ──────────────────────────────────────────────────
+
+for item in OPENCODE.md statusline-command.sh; do
+  if [[ -e "$DOTFILES_DIR/$item" ]]; then
+    make_symlink "$DOTFILES_DIR/$item" "$OPENCODE_DIR/$item"
+  fi
+done
+
+for dir in commands skills; do
+  src="$DOTFILES_DIR/$dir"
+  dest="$OPENCODE_DIR/$dir"
+  if [[ -d "$src" ]]; then
+    if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
+      SKIPPED+=("$dir/ (already symlinked)")
+    else
+      backup_if_needed "$dest"
+      [[ -L "$dest" ]] && rm -f "$dest"
+      ln -s "$src" "$dest"
+      SYMLINKED+=("$dir/")
+    fi
+  fi
+done
+
 # ── plugins ───────────────────────────────────────────────────────────────────
 
 PLUGINS_FILE="$DOTFILES_DIR/plugins.txt"
@@ -209,7 +256,7 @@ if [[ ${#SKIPPED_PLUGINS[@]} -gt 0 ]]; then
 fi
 
 if [[ ${#COPIED[@]} -eq 0 && ${#SYMLINKED[@]} -eq 0 ]]; then
-  printf '\nNothing to do — already up to date.\n\n'
+  printf '\nNothing to do — already up to date.\n'
 else
-  printf '\nDone. Claude Code settings are live.\n\n'
+  printf '\nDone. AI agent settings are live.\n'
 fi
