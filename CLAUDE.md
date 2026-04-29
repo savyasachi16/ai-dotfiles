@@ -48,6 +48,52 @@ End every response with a confidence score:
 
 **Confidence: XX%** | sources: [required when referencing code or docs — `file:line` or URLs; omit for general knowledge]
 
+## Commits
+
+Follow Conventional Commits for every commit message, no exceptions.
+
+Format: `type(scope): subject` (scope optional). Subject in imperative mood, lowercase, no trailing period, ≤72 chars.
+
+Types:
+- `feat` — user-visible new functionality
+- `fix` — bug fix
+- `docs` — documentation only
+- `refactor` — code change that neither fixes a bug nor adds a feature
+- `perf` — performance improvement
+- `test` — adding/updating tests
+- `chore` — maintenance, deps, tooling, untracking files, rename-only changes
+- `build` — build system / package config
+- `ci` — CI config
+- `style` — formatting only (whitespace, semicolons)
+- `revert` — reverts a prior commit
+
+Body (optional, after a blank line): wrap at 72, explain *why* not *what*. Use bullets for multiple points. Reference issue IDs at the end (`Closes #123`).
+
+Breaking changes: append `!` after type/scope (`feat(api)!: drop /v1`) AND include a `BREAKING CHANGE:` footer explaining the migration.
+
+Don't mix unrelated changes in one commit — split. If a single logical change touches multiple types, pick the dominant one (usually `feat` or `fix`).
+
+## READMEs
+
+Every project README must include a `## Stack` section right after the H1 + tagline. Format: shields.io badges, anchor-wrapped, one per technology, on contiguous lines (no blank lines between — they render as a single row).
+
+```markdown
+## Stack
+
+<a href="https://astro.build"><img src="https://img.shields.io/badge/Astro-FF5D01?style=flat&logo=astro&logoColor=white" alt="Astro" /></a>
+<a href="https://react.dev"><img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=000" alt="React" /></a>
+```
+
+Rules:
+- One badge per primary tech: framework, language, runtime, key libraries, deploy target, test runner, DB. Skip transitive deps.
+- Color is the brand hex (Astro `#FF5D01`, React `#61DAFB`, Tailwind `#06B6D4`, TypeScript `#3178C6`, Vercel `#000000`, etc.). Use `logoColor=000` on light brand backgrounds, `logoColor=white` on dark.
+- `style=flat`, always lowercase the `?style` query.
+- Each badge wrapped in `<a href="…">` to the canonical homepage.
+- Order: foundation framework first, then language, then libraries, then infra/deploy last.
+- Do not use the older `![](shields.io)` form — anchor-wrapped `<img>` lets the badges link out.
+
+When asked to "match folio's stack section" or similar reference repos, this is the canonical format.
+
 ## Tools available
 
 - **1Password CLI (`op`)** — installed, authed via desktop app integration (Touch ID). Use `op item get "<name>" --fields <field> --reveal` to fetch secrets. Prefer `--fields` over full-item dumps to keep responses small.
