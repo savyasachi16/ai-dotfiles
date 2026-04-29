@@ -6,8 +6,6 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAUDE_DIR="$HOME/.claude"
-OPENCODE_DIR="$HOME/.config/opencode"
 BACKUP_TS="$(date +%Y%m%d_%H%M%S)"
 BACKUP_DIR="$HOME/.ai-dotfiles-backup-$BACKUP_TS"
 BACKUP_USED=false
@@ -85,143 +83,110 @@ case "$OS" in
     ;;
 esac
 
-# ── setup ─────────────────────────────────────────────────────────────────────
+# ── agents ────────────────────────────────────────────────────────────────────
+
+# Define agents and their home directories
+CLAUDE_DIR="$HOME/.claude"
+OPENCODE_DIR="$HOME/.config/opencode"
+GEMINI_DIR="$HOME/.gemini"
 
 printf '\n\033[1mAI agent dotfiles setup\033[0m\n'
 printf 'Dotfiles: %s\n' "$DOTFILES_DIR"
-printf 'Claude:  %s\n' "$CLAUDE_DIR"
-printf 'OpenCode: %s\n\n' "$OPENCODE_DIR"
+printf 'Claude:   %s\n' "$CLAUDE_DIR"
+printf 'OpenCode: %s\n' "$OPENCODE_DIR"
+printf 'Gemini:   %s\n\n' "$GEMINI_DIR"
 
 mkdir -p "$OPENCODE_DIR"
 mkdir -p "$CLAUDE_DIR"
+mkdir -p "$GEMINI_DIR"
 
-# ── settings.json (copy, not symlink — see Claude Code bugs #764 / #3575) ────
+# ── Universal Instructions (AI.md) ────────────────────────────────────────────
 
-SETTINGS_TPL="$DOTFILES_DIR/settings.json.tpl"
-SETTINGS_DEST="$CLAUDE_DIR/settings.json"
+# Map agent instruction files to their homes
+declare -A INSTRUCTION_MAP=(
+  ["CLAUDE.md"]="$CLAUDE_DIR/CLAUDE.md"
+  ["OPENCODE.md"]="$OPENCODE_DIR/OPENCODE.md"
+  ["GEMINI.md"]="$GEMINI_DIR/GEMINI.md"
+)
 
-# Build expected content by substituting @@CLAUDE_DIR@@
-EXPECTED_SETTINGS="$(sed "s|@@CLAUDE_DIR@@|${CLAUDE_DIR}|g" "$SETTINGS_TPL")"
-ACTUAL_SETTINGS="$(cat "$SETTINGS_DEST" 2>/dev/null || true)"
-
-if [[ "$EXPECTED_SETTINGS" == "$ACTUAL_SETTINGS" ]]; then
-  SKIPPED+=("settings.json (already up to date)")
-else
-  # Back up only if the existing file isn't our own output
-  if [[ -e "$SETTINGS_DEST" && "$ACTUAL_SETTINGS" != "$EXPECTED_SETTINGS" ]]; then
-    backup_if_needed "$SETTINGS_DEST"
-  fi
-  printf '%s\n' "$EXPECTED_SETTINGS" > "$SETTINGS_DEST"
-  COPIED+=("settings.json")
-fi
-
-# ── symlinks ──────────────────────────────────────────────────────────────────
-
-# Individual files
-for item in statusline-command.sh CLAUDE.md; do
-  make_symlink "$DOTFILES_DIR/$item" "$CLAUDE_DIR/$item"
+for item in "${!INSTRUCTION_MAP[@]}"; do
+  make_symlink "$DOTFILES_DIR/$item" "${INSTRUCTION_MAP[$item]}"
 done
 
+# ── Shared statusline ─────────────────────────────────────────────────────────
+
+for dir in "$CLAUDE_DIR" "$OPENCODE_DIR"; do
+  make_symlink "$DOTFILES_DIR/statusline-command.sh" "$dir/statusline-command.sh"
+done
+
+# ── Claude specific ──────────────────────────────────────────────────────────
+
 # Memory dir — path is derived from parent of this repo (the "projects" dir)
-# ~/.claude/projects/<encoded-parent>/memory/ where encoding is tr '/' '-'
 PROJECTS_DIR="$(dirname "$DOTFILES_DIR")"
 ENCODED_PROJECTS="$(printf '%s' "$PROJECTS_DIR" | tr '/' '-')"
 MEMORY_PARENT="$CLAUDE_DIR/projects/${ENCODED_PROJECTS}"
 MEMORY_DEST="$MEMORY_PARENT/memory"
 MEMORY_SRC="$DOTFILES_DIR/memory"
+
 if [[ -d "$MEMORY_SRC" ]]; then
   mkdir -p "$MEMORY_PARENT"
-  if [[ -L "$MEMORY_DEST" && "$(readlink "$MEMORY_DEST")" == "$MEMORY_SRC" ]]; then
-    SKIPPED+=("memory/ (already symlinked)")
-  else
-    backup_if_needed "$MEMORY_DEST"
-    [[ -L "$MEMORY_DEST" ]] && rm -f "$MEMORY_DEST"
-    ln -s "$MEMORY_SRC" "$MEMORY_DEST"
-    SYMLINKED+=("memory/  →  $MEMORY_DEST")
-  fi
+  make_symlink "$MEMORY_SRC" "$MEMORY_DEST"
 fi
 
 # Directories (symlink the whole dir so new files appear automatically)
 for dir in commands skills hooks; do
-  src="$DOTFILES_DIR/$dir"
-  dest="$CLAUDE_DIR/$dir"
-  if [[ ! -d "$src" ]]; then
-    SKIPPED+=("$dir/ (not in repo)")
-    continue
-  fi
-  # Already correctly symlinked — skip
-  if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
-    SKIPPED+=("$dir/ (already symlinked)")
-    continue
-  fi
-  backup_if_needed "$dest"
-  [[ -L "$dest" ]] && rm -f "$dest"
-  ln -s "$src" "$dest"
-  SYMLINKED+=("$dir/")
+  make_symlink "$DOTFILES_DIR/$dir" "$CLAUDE_DIR/$dir"
 done
 
-# ── OpenCode settings.json (copy, not symlink) ─────────────────────────
-
-OPENCODE_SETTINGS_TPL="$DOTFILES_DIR/opencode.json.tpl"
-OPENCODE_SETTINGS_DEST="$OPENCODE_DIR/opencode.json"
-
-if [[ -f "$OPENCODE_SETTINGS_TPL" ]]; then
-  EXPECTED_SETTINGS="$(sed "s|@@OPENCODE_DIR@@|${OPENCODE_DIR}|g" "$OPENCODE_SETTINGS_TPL")"
-  ACTUAL_SETTINGS="$(cat "$OPENCODE_SETTINGS_DEST" 2>/dev/null || true)"
-
-  if [[ "$EXPECTED_SETTINGS" == "$ACTUAL_SETTINGS" ]]; then
-    SKIPPED+=("opencode.json (already up to date)")
-  else
-    if [[ -e "$OPENCODE_SETTINGS_DEST" && "$ACTUAL_SETTINGS" != "$EXPECTED_SETTINGS" ]]; then
-      backup_if_needed "$OPENCODE_SETTINGS_DEST"
-    fi
-    printf '%s\n' "$EXPECTED_SETTINGS" > "$OPENCODE_SETTINGS_DEST"
-    COPIED+=("opencode.json")
-  fi
-fi
-
-# ── OpenCode symlinks ──────────────────────────────────────────────────
-
-for item in OPENCODE.md statusline-command.sh; do
-  if [[ -e "$DOTFILES_DIR/$item" ]]; then
-    make_symlink "$DOTFILES_DIR/$item" "$OPENCODE_DIR/$item"
-  fi
-done
+# ── OpenCode specific ────────────────────────────────────────────────────────
 
 for dir in commands skills; do
-  src="$DOTFILES_DIR/$dir"
-  dest="$OPENCODE_DIR/$dir"
-  if [[ -d "$src" ]]; then
-    if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
-      SKIPPED+=("$dir/ (already symlinked)")
-    else
-      backup_if_needed "$dest"
-      [[ -L "$dest" ]] && rm -f "$dest"
-      ln -s "$src" "$dest"
-      SYMLINKED+=("$dir/")
-    fi
-  fi
+  make_symlink "$DOTFILES_DIR/$dir" "$OPENCODE_DIR/$dir"
 done
+
+# ── settings.json (copy logic for Claude/OpenCode) ───────────────────────────
+
+# We still copy because symlinks are reported buggy in these agents.
+# However, we use absolute paths in the final file.
+
+sync_settings() {
+  local tpl="$1"
+  local dest="$2"
+  local placeholder="$3"
+  local replacement="$4"
+
+  [[ -f "$tpl" ]] || return 0
+
+  local expected
+  expected="$(sed "s|${placeholder}|${replacement}|g" "$tpl")"
+  local actual
+  actual="$(cat "$dest" 2>/dev/null || true)"
+
+  if [[ "$expected" == "$actual" ]]; then
+    SKIPPED+=("$(basename "$dest") (already up to date)")
+  else
+    if [[ -e "$dest" && "$actual" != "$expected" ]]; then
+      backup_if_needed "$dest"
+    fi
+    printf '%s\n' "$expected" > "$dest"
+    COPIED+=("$(basename "$dest")")
+  fi
+}
+
+sync_settings "$DOTFILES_DIR/settings.json.tpl" "$CLAUDE_DIR/settings.json" "@@CLAUDE_DIR@@" "$CLAUDE_DIR"
+sync_settings "$DOTFILES_DIR/opencode.json.tpl" "$OPENCODE_DIR/opencode.json" "@@OPENCODE_DIR@@" "$OPENCODE_DIR"
 
 # ── plugins ───────────────────────────────────────────────────────────────────
 
 PLUGINS_FILE="$DOTFILES_DIR/plugins.txt"
-INSTALLED_PLUGINS=()
-SKIPPED_PLUGINS=()
-
 if [[ -f "$PLUGINS_FILE" ]] && command -v claude &>/dev/null; then
-  # Get list of already-installed plugin IDs (e.g. "superpowers@claude-plugins-official")
   installed_list=$(claude plugin list 2>/dev/null | grep '❯' | awk '{print $2}' || true)
-
   while IFS= read -r line; do
-    # Skip comments and blank lines
     [[ "$line" =~ ^# ]] && continue
     [[ -z "$line" ]]    && continue
-
     plugin_id="$line"
-
     if echo "$installed_list" | grep -qF "$plugin_id"; then
-      SKIPPED_PLUGINS+=("$plugin_id (already installed)")
+      SKIPPED+=("$plugin_id (plugin already installed)")
     else
       if claude plugin install "$plugin_id" &>/dev/null; then
         INSTALLED_PLUGINS+=("$plugin_id")
@@ -236,24 +201,11 @@ fi
 
 printf '\n\033[1mSummary\033[0m\n'
 
-if [[ ${#COPIED[@]} -gt 0 ]]; then
-  for f in "${COPIED[@]}"; do success "Copied:    $f"; done
-fi
-if [[ ${#SYMLINKED[@]} -gt 0 ]]; then
-  for f in "${SYMLINKED[@]}"; do success "Symlinked: $f"; done
-fi
-if [[ ${#BACKED_UP[@]} -gt 0 ]]; then
-  for f in "${BACKED_UP[@]}"; do warn "Backed up: $f  →  $BACKUP_DIR/"; done
-fi
-if [[ ${#SKIPPED[@]} -gt 0 ]]; then
-  for f in "${SKIPPED[@]}"; do info "Skipped:   $f"; done
-fi
-if [[ ${#INSTALLED_PLUGINS[@]} -gt 0 ]]; then
-  for f in "${INSTALLED_PLUGINS[@]}"; do success "Plugin:    $f"; done
-fi
-if [[ ${#SKIPPED_PLUGINS[@]} -gt 0 ]]; then
-  for f in "${SKIPPED_PLUGINS[@]}"; do info "Plugin:    $f"; done
-fi
+for f in "${COPIED[@]}"; do success "Copied:    $f"; done
+for f in "${SYMLINKED[@]}"; do success "Symlinked: $f"; done
+for f in "${BACKED_UP[@]}"; do warn "Backed up: $f  →  $BACKUP_DIR/"; done
+for f in "${SKIPPED[@]}"; do info "Skipped:   $f"; done
+for f in "${INSTALLED_PLUGINS[@]}"; do success "Plugin:    $f"; done
 
 if [[ ${#COPIED[@]} -eq 0 && ${#SYMLINKED[@]} -eq 0 ]]; then
   printf '\nNothing to do — already up to date.\n'

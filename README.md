@@ -2,28 +2,47 @@
 
 Cross-machine AI agent configuration for Mac and Linux.
 
+## Stack
+
+<a href="https://anthropic.com"><img src="https://img.shields.io/badge/Claude_Code-7C4DFF?style=flat&logo=anthropic&logoColor=white" alt="Claude Code" /></a>
+<a href="https://google.com"><img src="https://img.shields.io/badge/Gemini_CLI-4285F4?style=flat&logo=google&logoColor=white" alt="Gemini CLI" /></a>
+<a href="https://opencode.ai"><img src="https://img.shields.io/badge/OpenCode-000000?style=flat&logo=openai&logoColor=white" alt="OpenCode" /></a>
+<a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/Bash-4EAA25?style=flat&logo=gnubash&logoColor=white" alt="Bash" /></a>
+
 ## Agents supported
 
 | Agent | Config location | Instructions |
 |-------|---------------|--------------|
 | Claude Code | `~/.claude/` | `CLAUDE.md` |
+| Gemini CLI | `~/.gemini/` | `GEMINI.md` |
 | OpenCode | `~/.config/opencode/` | `OPENCODE.md` |
+
+## Universal Instructions
+
+All agent instruction files (`CLAUDE.md`, `GEMINI.md`, `OPENCODE.md`) are symlinked to `AI.md` in this repo. This ensures that any behavioral update (tone, conciseness, tools) is instantly shared across all agents.
 
 ## Claude Code
 
 | File/Dir | Method | Notes |
 |---|---|---|
-| `settings.json` | Copied from `.tpl` | Symlink causes Claude Code bug [#764](https://github.com/anthropics/claude-code/issues/764)/[#3575](https://github.com/anthropics/claude-code/issues/764) |
+| `settings.json` | Copied from `.tpl` | Symlink causes Claude Code bug [#764](https://github.com/anthropics/claude-code/issues/764) |
 | `statusline-command.sh` | Symlinked | oh-my-zsh-inspired statusbar |
-| `CLAUDE.md` | Symlinked | Global instructions |
+| `CLAUDE.md` | Symlinked | Universal instructions (`AI.md`) |
 | `commands/`, `skills/`, `hooks/` | Symlinked (whole dir) | Custom slash commands, skills, hooks |
+
+## Gemini CLI
+
+| File/Dir | Method | Notes |
+|---|---|---|
+| `GEMINI.md` | Symlinked | Universal instructions (`AI.md`) |
+| `settings.json` | Copied | Auth and general settings |
 
 ## OpenCode
 
 | File/Dir | Method | Notes |
 |---|---|---|
 | `opencode.json` | Copied from `.tpl` | Settings |
-| `OPENCODE.md` | Symlinked | Global instructions |
+| `OPENCODE.md` | Symlinked | Universal instructions (`AI.md`) |
 | `commands/`, `skills/` | Symlinked (whole dir) | Custom slash commands, skills |
 
 ## New machine setup
@@ -73,5 +92,5 @@ and OAuth tokens.
 
 ## Templates
 
-Templates use `@@OPENCODE_DIR@@` as a placeholder for `~/.config/opencode`.
+Templates use `@@DIR@@` placeholders for absolute home paths.
 `setup.sh` substitutes the correct absolute path on each machine using `sed`.
